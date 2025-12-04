@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 2.25)
+cmake_minimum_required(VERSION 3.40)
 
 if(${CMAKE_CURRENT_SOURCE_DIR} STREQUAL ${CMAKE_CURRENT_BINARY_DIR})
   message(
@@ -9,7 +9,7 @@ endif()
 
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
-project(AOC_2023)
+project(AOC_2025)
 
 # First build submodules
 add_subdirectory("ext/argh")

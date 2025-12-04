@@ -13,7 +13,7 @@ void lg::vPrintMsg(LogLevel level,
       fmt::print(fmt::emphasis::bold | fg(fmt::color::yellow), "[WRN]\t");
     } break;
     case LogLevel::INFO: {
-      fmt::print(/*fmt::emphasis::bold | fg(fmt::color::cyan), */ "[INF]\t");
+      fmt::print(fmt::emphasis::bold | fg(fmt::color::cyan), "[INF]\t");
     } break;
     case LogLevel::RES_OK: {
       fmt::print(fmt::emphasis::bold | fg(fmt::color::green), "[RESULT]\t");

@@ -20,18 +20,18 @@ constexpr auto VERBOSE_FLAG_SHORT{"v"};
 
 constexpr std::initializer_list<const char* const> VALID_CL_ARGS{
     INPUT_FILE, INPUT_FILE_SHORT, VERBOSE_FLAG, VERBOSE_FLAG_SHORT};
-} // namespace params
-
 
 class Clap
 {
 public:
   explicit Clap();
+  Clap(int argc, char** argv);
 
-  bool Parse(int argc, char* argv[]);
+  void Parse(int argc, char** argv);
   bool WasParamProvided(const std::string& paramName);
   std::string GetParamValue(const std::string& paramName);
 
 private:
   argh::parser cmdInput;
 };
+} // namespace params

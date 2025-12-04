@@ -4,29 +4,23 @@
 
 #include <Logger.hpp>
 
+namespace params
+{
 static void configArguments(argh::parser& parser) {
   parser.add_param(params::VALID_CL_ARGS);
 }
 
 Clap::Clap() { configArguments(cmdInput); }
 
-bool Clap::Parse(int argc, char* argv[]) {
-  cmdInput.parse(argc, argv);
-  // if (!cmdInput[params::VALID_CL_ARGS]) {
-  //   lg::printErr("Provide valid params!");
-  //   lg::printErr("None of received params are valid");
-  //   return false;
-  // }
-
-  if (cmdInput[{params::VERBOSE_FLAG, params::VERBOSE_FLAG_SHORT}]) {
-    lg::verboseFlag = true;
-  }
-
-  return true;
+Clap::Clap(int argc, char** argv) {
+  configArguments(cmdInput);
+  Parse(argc, argv);
 }
 
+void Clap::Parse(int argc, char* argv[]) { cmdInput.parse(argc, argv); }
+
 bool Clap::WasParamProvided(const std::string& paramName) {
-  return static_cast<bool>(cmdInput(paramName));
+  return static_cast<bool>(cmdInput[paramName]);
 }
 
 std::string Clap::GetParamValue(const std::string& paramName) {
@@ -34,3 +28,5 @@ std::string Clap::GetParamValue(const std::string& paramName) {
 
   return cmdInput(paramName).str();
 }
+
+} // namespace params
