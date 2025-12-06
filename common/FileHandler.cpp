@@ -63,7 +63,7 @@ bool File::GetLine(std::string& out_line) const noexcept {
 
   out_line.assign(readLine(fileHdl));
 
-  return out_line.empty();
+  return !out_line.empty();
 }
 
 bool File::Valid() const noexcept { return static_cast<bool>(fileHdl); }
@@ -97,12 +97,26 @@ size_t File::Size() const noexcept {
 File::line_iterator::line_iterator(ContentPtrPos startPos, File& file) :
     fileRef(file),
     fileContentPtr(static_cast<decltype(fileContentPtr)>(startPos)),
-    currentLine() {}
-
+    currentLine() {
+  // Read first line
+  if (startPos != ContentPtrPos::FILE_END) { readLine(); }
+}
 
 std::string File::line_iterator::operator*() { return currentLine; }
 
 File::line_iterator& File::line_iterator::operator++() {
+  readLine();
+  return *this;
+}
+bool File::line_iterator::operator==(const line_iterator& other) {
+  return fileContentPtr == other.fileContentPtr;
+}
+
+bool File::line_iterator::operator!=(const line_iterator& other) {
+  return fileContentPtr != other.fileContentPtr;
+}
+
+void File::line_iterator::readLine() {
   std::string retval{};
   const bool status{fileRef.get().GetLine(retval)};
   if (status) {
@@ -113,14 +127,6 @@ File::line_iterator& File::line_iterator::operator++() {
     fileContentPtr =
         static_cast<decltype(fileContentPtr)>(ContentPtrPos::FILE_END);
   }
-  return *this;
-}
-bool File::line_iterator::operator==(const line_iterator& other) {
-  return fileContentPtr == other.fileContentPtr;
-}
-
-bool File::line_iterator::operator!=(const line_iterator& other) {
-  return !this->operator==(other);
 }
 
 } // namespace common

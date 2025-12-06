@@ -87,6 +87,8 @@ public:
     bool operator!=(const line_iterator& other);
 
   private:
+    void readLine();
+
     std::reference_wrapper<File> fileRef;
     uint32_t fileContentPtr;
     std::string currentLine;
@@ -108,7 +110,7 @@ public:
 
 private:
   static constexpr auto fileDeleter{[](FILE* filePtr) {
-    // lg::printInf("Closing file: {}", filePtr);
+    lg::printInf("Closing file!");
     std::fclose(filePtr);
   }};
 
