@@ -1,13 +1,19 @@
+/**
+ * @file Clap.cpp
+ * @author Commentsareuseless
+ * @brief Command line arguments parser
+ *        Wrapper for argh to limit code repetitions
+ */
 #include "Clap.hpp"
 
 #include "argh.h"
 
 #include <Logger.hpp>
 
-namespace params
+namespace common
 {
 static void configArguments(argh::parser& parser) {
-  parser.add_param(params::VALID_CL_ARGS);
+  parser.add_param(KnownParams::VALID_CL_ARGS);
 }
 
 Clap::Clap() { configArguments(cmdInput); }
@@ -19,14 +25,20 @@ Clap::Clap(int argc, char** argv) {
 
 void Clap::Parse(int argc, char* argv[]) { cmdInput.parse(argc, argv); }
 
-bool Clap::WasParamProvided(const std::string& paramName) {
-  return static_cast<bool>(cmdInput[paramName]);
+bool Clap::IsFlagSet(const std::string& paramName) {
+  return cmdInput[paramName];
 }
 
-std::string Clap::GetParamValue(const std::string& paramName) {
-  if (!cmdInput(paramName)) { return std::string{}; }
+bool Clap::IsFlagSet(const AltParamList_t& altParamList) {
+  return cmdInput[altParamList];
+}
 
+std::string Clap::Value(const std::string& paramName) {
   return cmdInput(paramName).str();
 }
 
-} // namespace params
+std::string Clap::Value(const AltParamList_t& altParamList) {
+  return cmdInput(altParamList).str();
+}
+
+} // namespace common

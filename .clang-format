@@ -193,7 +193,7 @@ BraceWrapping:
   AfterObjCDeclaration: true
 
 
-  AfterStruct: false
+  AfterStruct: true
   # false:
   # struct foo {
   #     int x;

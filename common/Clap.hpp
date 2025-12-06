@@ -11,27 +11,34 @@
 #include <initializer_list>
 #include <string>
 
-namespace params
+namespace common
 {
-constexpr auto INPUT_FILE{"input"};
-constexpr auto INPUT_FILE_SHORT{"i"};
-constexpr auto VERBOSE_FLAG{"verbose"};
-constexpr auto VERBOSE_FLAG_SHORT{"v"};
+struct KnownParams
+{
+  static constexpr auto INPUT_FILE{"input"};
+  static constexpr auto INPUT_FILE_SHORT{"i"};
+  static constexpr auto VERBOSE_FLAG{"verbose"};
+  static constexpr auto VERBOSE_FLAG_SHORT{"v"};
 
-constexpr std::initializer_list<const char* const> VALID_CL_ARGS{
-    INPUT_FILE, INPUT_FILE_SHORT, VERBOSE_FLAG, VERBOSE_FLAG_SHORT};
+  static constexpr std::initializer_list<const char* const> VALID_CL_ARGS{
+      INPUT_FILE, INPUT_FILE_SHORT, VERBOSE_FLAG, VERBOSE_FLAG_SHORT};
+};
 
 class Clap
 {
 public:
+  using AltParamList_t = std::initializer_list<const char* const>;
+
   explicit Clap();
   Clap(int argc, char** argv);
 
   void Parse(int argc, char** argv);
-  bool WasParamProvided(const std::string& paramName);
-  std::string GetParamValue(const std::string& paramName);
+  bool IsFlagSet(const std::string& paramName);
+  bool IsFlagSet(const AltParamList_t& altParamList);
+  std::string Value(const std::string& paramName);
+  std::string Value(const AltParamList_t& altParamList);
 
 private:
   argh::parser cmdInput;
 };
-} // namespace params
+} // namespace common

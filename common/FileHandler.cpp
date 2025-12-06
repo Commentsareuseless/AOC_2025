@@ -1,76 +1,126 @@
 #include "FileHandler.hpp"
 
 #include "Logger.hpp"
-
-#include <cstdio>
-#include <memory>
-#include <stdint.h>
+#include <cstddef>
+#include <string_view>
 #include <utility>
 
-constexpr uint32_t ARBITRARY_NUM_OF_CHARS_READ_AT_ONCE{60};
+namespace common
+{
+namespace
+{
+inline constexpr uint32_t ARBITRARY_NUM_OF_CHARS_READ_AT_ONCE{20};
+inline constexpr uint32_t MAX_LINE_WIDTH{100};
 
-FileHandler::FileHandler(FILE* hdl) : handle(hdl), endOfFile(false) {}
+// constexpr size_t fileSize()
 
-FileHandler::FileHandler(FileHandler&& other) noexcept :
-    handle{other.handle}, endOfFile(other.endOfFile) {}
+template <typename Deleter>
+std::string readLine(const std::unique_ptr<FILE, Deleter>& filePtr) {
+  std::string output{};
+  output.reserve(ARBITRARY_NUM_OF_CHARS_READ_AT_ONCE);
 
-FileHandler::~FileHandler() {
-  if (nullptr != handle) {
-    const int retval = std::fclose(handle);
+  if (!filePtr) {
+    lg::printErr("Provided file pointer is empty!");
+    return {};
+  }
 
-    if (0 > retval) {
-      lg::printErr("Errors occured on file close");
-    } else {
-      lg::printInf("Closed input file");
+  for (size_t byte{0}; byte < MAX_LINE_WIDTH; ++byte) {
+    const int retChar{std::fgetc(filePtr.get())};
+    /* Return if we've reached end of file */
+    if (retChar == EOF) { return output; }
+
+    const char newChar{static_cast<char>(retChar)};
+    if (newChar == '\n') {
+      // Found end of current line
+      return output;
     }
+
+    output += newChar;
+  }
+
+  lg::printWrn("Max line width reached");
+  return output;
+}
+} // namespace
+
+
+File::File(std::string_view filePath) :
+    fileHdl(std::fopen(filePath.data(), "r"), fileDeleter) {
+  if (!Valid()) {
+    lg::printErr("Provided file path '{}' is invalid!", filePath);
   }
 }
 
-FileHandler& FileHandler::operator=(FileHandler&& other) noexcept {
-  handle    = other.handle;
-  endOfFile = other.endOfFile;
+File::File(File&& other) noexcept : fileHdl{std::move(other.fileHdl)} {}
+
+File& File::operator=(File&& other) noexcept {
+  other.fileHdl.reset(other.fileHdl.release());
   return *this;
 }
 
-bool FileHandler::GetNextLine(std::string& out_line) noexcept {
-  bool retval{true};
+bool File::GetLine(std::string& out_line) const noexcept {
   out_line.clear();
-  out_line.resize(ARBITRARY_NUM_OF_CHARS_READ_AT_ONCE);
 
-  for (char& input : out_line) {
-    const int retChar = std::fgetc(handle);
-    if (EOF == retChar) {
-      // We've read whole file
-      retval    = false;
-      endOfFile = true;
-      break;
-    }
+  out_line.assign(readLine(fileHdl));
 
-    const char chr = static_cast<char>(retChar);
-    if ('\n' == chr) {
-      // End of line, also return
-      break;
-    }
-
-    // Otherwise save read char
-    input = chr;
-  }
-
-  return retval;
+  return out_line.empty();
 }
 
-FileHandler::File_ptr FileHandler::Open(std::string_view path) noexcept {
+bool File::Valid() const noexcept { return static_cast<bool>(fileHdl); }
 
-  FILE* hdl = nullptr;
+size_t File::Size() const noexcept {
+  /* Save current file ptr position to restore later */
+  const auto seekPos{std::ftell(fileHdl.get())};
 
-  hdl = std::fopen(path.data(), "r");
-  if (nullptr == hdl) {
-    lg::printErr("Provided file does not exist or path is invalid");
-    lg::printInf("Provided path:\n\t- {}", path);
-    return File_ptr{nullptr};
+  if (0 != std::fseek(fileHdl.get(), 0, SEEK_END)) {
+    /* Error */
+    lg::printErr("{}:{}std::fseek() failed!", __FILE__, __LINE__);
+    return 0;
+  }
+
+  /* In theory this result is unspecified in text mode
+     but for UTF-8 encoding it should be the same as for binary
+     mode (indicate number of bytes from the top of the file)
+     so I'll use it anyway :) */
+  const auto fileSize{std::ftell(fileHdl.get())};
+
+  // Set file ptr to where we were before
+  if (0 != std::fseek(fileHdl.get(), seekPos, SEEK_SET)) {
+    /* Error*/
+    lg::printErr("{}:{}std::fseek() failed!", __FILE__, __LINE__);
+    return 0;
+  }
+
+  return (fileSize > 0) ? static_cast<size_t>(fileSize) : 0;
+}
+
+File::line_iterator::line_iterator(ContentPtrPos startPos, File& file) :
+    fileRef(file),
+    fileContentPtr(static_cast<decltype(fileContentPtr)>(startPos)),
+    currentLine() {}
+
+
+std::string File::line_iterator::operator*() { return currentLine; }
+
+File::line_iterator& File::line_iterator::operator++() {
+  std::string retval{};
+  const bool status{fileRef.get().GetLine(retval)};
+  if (status) {
+    currentLine.assign(retval);
+    fileContentPtr += currentLine.size();
   } else {
-    lg::printInf("Opened {} file", path);
+    /* End of file */
+    fileContentPtr =
+        static_cast<decltype(fileContentPtr)>(ContentPtrPos::FILE_END);
   }
-
-  return File_ptr{new FileHandler(hdl)};
+  return *this;
 }
+bool File::line_iterator::operator==(const line_iterator& other) {
+  return fileContentPtr == other.fileContentPtr;
+}
+
+bool File::line_iterator::operator!=(const line_iterator& other) {
+  return !this->operator==(other);
+}
+
+} // namespace common
