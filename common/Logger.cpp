@@ -19,6 +19,5 @@ void lg::vPrintMsg(LogLevel level,
       fmt::print(fmt::emphasis::bold | fg(fmt::color::green), "[RESULT]\t");
     } break;
   }
-  fmt::vprint(format, args);
-  fmt::print("\n");
+  fmt::vprintln(stdout, format, args);
 }
