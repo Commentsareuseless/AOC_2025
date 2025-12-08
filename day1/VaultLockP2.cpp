@@ -1,7 +1,7 @@
 /**
  * @file VaultLock.cpp
  * @author Commentsareuseless
- * @brief First dat puzzle
+ * @brief First day puzzle
  * @version 0.1
  * @date 2025-12-04
  */
@@ -9,8 +9,7 @@
 #include <Clap.hpp>
 #include <FileHandler.hpp>
 #include <cstdint>
-#include <string>
-#include <utility>
+#include <FileIterator.hpp>
 
 inline constexpr std::initializer_list<const char* const> VERBOSE_FLAG_ALTS{
     common::KnownParams::VERBOSE_FLAG, common::KnownParams::VERBOSE_FLAG_SHORT};
@@ -73,6 +72,8 @@ private:
   constexpr DialTurnState turnLeft(uint32_t value) const {
     if (value > currentPos) {
       return {DIAL_MAX_VALUE - (value - currentPos),
+              /* Dial ending at 0 is a special case, where we don't want
+                 to increment "0 cross counter" (because we've stopped at 0) */
               (currentPos == 0) ? 0u : 1u};
     }
     return {currentPos - value, 0};
@@ -98,7 +99,7 @@ int main(int argc, char* argv[]) {
   Dial vaultDial{};
   uint32_t dialAt0Cnt{0};
   uint32_t zeroCrossesTotal{0};
-  for (const auto& line : inputFile) {
+  for (const auto& line : common::FileIterator(inputFile)) {
     if (line.empty()) {
       lg::printInf("Found empty line!");
       continue;

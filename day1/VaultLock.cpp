@@ -1,10 +1,11 @@
 /**
  * @file VaultLock.cpp
  * @author Commentsareuseless
- * @brief First dat puzzle
+ * @brief First day puzzle
  * @version 0.1
  * @date 2025-12-04
  */
+#include "FileIterator.hpp"
 #include <Logger.hpp>
 #include <Clap.hpp>
 #include <FileHandler.hpp>
@@ -78,7 +79,7 @@ int main(int argc, char* argv[]) {
 
   Dial vaultDial{};
   uint32_t dialAt0Cnt{0};
-  for (const auto& line : inputFile) {
+  for (const auto& line : common::FileIterator(inputFile)) {
     if (line.empty()) {
       lg::printInf("Found empty line!");
       continue;

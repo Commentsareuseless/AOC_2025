@@ -2,7 +2,10 @@
 
 #include "Logger.hpp"
 #include <cstddef>
+#include <cstdio>
+#include <string>
 #include <string_view>
+#include <type_traits>
 #include <utility>
 
 namespace common
@@ -12,10 +15,10 @@ namespace
 inline constexpr uint32_t ARBITRARY_NUM_OF_CHARS_READ_AT_ONCE{20};
 inline constexpr uint32_t MAX_LINE_WIDTH{100};
 
-// constexpr size_t fileSize()
+template <class Deleter>
+std::string readFileUntill(const std::unique_ptr<FILE, Deleter>& filePtr,
+                           const char stopChar) {
 
-template <typename Deleter>
-std::string readLine(const std::unique_ptr<FILE, Deleter>& filePtr) {
   std::string output{};
   output.reserve(ARBITRARY_NUM_OF_CHARS_READ_AT_ONCE);
 
@@ -30,8 +33,8 @@ std::string readLine(const std::unique_ptr<FILE, Deleter>& filePtr) {
     if (retChar == EOF) { return output; }
 
     const char newChar{static_cast<char>(retChar)};
-    if (newChar == '\n') {
-      // Found end of current line
+    if (newChar == stopChar) {
+      // Found end of current read chunk
       return output;
     }
 
@@ -58,10 +61,13 @@ File& File::operator=(File&& other) noexcept {
   return *this;
 }
 
-bool File::GetLine(std::string& out_line) const noexcept {
+bool File::GetLine(std::string& out_line, char separator) const noexcept {
+  const auto readStopCondition{
+      [separator](char input) -> bool { return input == separator; }};
+
   out_line.clear();
 
-  out_line.assign(readLine(fileHdl));
+  out_line.assign(readFileUntill(fileHdl, separator));
 
   return !out_line.empty();
 }
@@ -94,39 +100,10 @@ size_t File::Size() const noexcept {
   return (fileSize > 0) ? static_cast<size_t>(fileSize) : 0;
 }
 
-File::line_iterator::line_iterator(ContentPtrPos startPos, File& file) :
-    fileRef(file),
-    fileContentPtr(static_cast<decltype(fileContentPtr)>(startPos)),
-    currentLine() {
-  // Read first line
-  if (startPos != ContentPtrPos::FILE_END) { readLine(); }
+std::string File::GetChunk(size_t chunkSize) const noexcept {
+  std::string output{};
+  output.resize(chunkSize);
+  (void)std::fread(output.data(), 1, chunkSize, fileHdl.get());
+  return output;
 }
-
-std::string File::line_iterator::operator*() { return currentLine; }
-
-File::line_iterator& File::line_iterator::operator++() {
-  readLine();
-  return *this;
-}
-bool File::line_iterator::operator==(const line_iterator& other) {
-  return fileContentPtr == other.fileContentPtr;
-}
-
-bool File::line_iterator::operator!=(const line_iterator& other) {
-  return fileContentPtr != other.fileContentPtr;
-}
-
-void File::line_iterator::readLine() {
-  std::string retval{};
-  const bool status{fileRef.get().GetLine(retval)};
-  if (status) {
-    currentLine.assign(retval);
-    fileContentPtr += currentLine.size();
-  } else {
-    /* End of file */
-    fileContentPtr =
-        static_cast<decltype(fileContentPtr)>(ContentPtrPos::FILE_END);
-  }
-}
-
 } // namespace common

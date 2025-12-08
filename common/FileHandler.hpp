@@ -5,6 +5,7 @@
  */
 #pragma once
 
+#include <cstddef>
 #include <limits>
 #include <memory>
 #include <string>
@@ -35,7 +36,7 @@ public:
    * @retval true     - More data is left to read
    * @retval false    - EOF
    */
-  bool GetLine(std::string& out_line) const noexcept;
+  bool GetLine(std::string& out_line, char separator = '\n') const noexcept;
 
   /**
    * @brief Check if file has been properly opened
@@ -53,6 +54,14 @@ public:
   size_t Size() const noexcept;
 
   /**
+   * @brief Get specified number of characters from file (/file chunk)
+   *
+   * @param chunkSize - Number of characters to read
+   * @return Read characters
+   */
+  std::string GetChunk(size_t chunkSize) const noexcept;
+
+  /**
    * @brief Open existing file for reading
    *
    * @param path path to file
@@ -60,53 +69,6 @@ public:
    * @return unique_ptr to opened file (may be nullptr if file doesn't exist)
    */
   static File Open(std::string_view path) noexcept;
-
-  /**
-   * @brief File iterator, allows iterating through
-   *        lines in text files
-   */
-  struct line_iterator
-  {
-    using iterator_category = std::forward_iterator_tag;
-    using value_type        = std::string;
-    using difference_type   = uint32_t;
-    using pointer           = std::string*;
-    using reference         = std::string&;
-
-    enum class ContentPtrPos : difference_type
-    {
-      FILE_BEGIN = std::numeric_limits<difference_type>::min(),
-      FILE_END   = std::numeric_limits<difference_type>::max(),
-    };
-
-    explicit line_iterator(ContentPtrPos startPos, File& file);
-
-    std::string operator*();
-    line_iterator& operator++();
-    bool operator==(const line_iterator& other);
-    bool operator!=(const line_iterator& other);
-
-  private:
-    void readLine();
-
-    std::reference_wrapper<File> fileRef;
-    uint32_t fileContentPtr;
-    std::string currentLine;
-  };
-
-  line_iterator begin() {
-    return line_iterator{line_iterator::ContentPtrPos::FILE_BEGIN, *this};
-  }
-  line_iterator end() {
-    return line_iterator{line_iterator::ContentPtrPos::FILE_END, *this};
-  }
-  // Const iterator not supported yet
-  // const line_iterator cbegin() const {
-  //   return line_iterator{line_iterator::ContentPtrPos::FILE_BEGIN, *this};
-  // }
-  // const line_iterator cend() const {
-  //   return line_iterator{line_iterator::ContentPtrPos::FILE_END, *this};
-  // }
 
 private:
   static constexpr auto fileDeleter{[](FILE* filePtr) {
