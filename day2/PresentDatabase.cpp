@@ -12,19 +12,19 @@
 #include <FileIterator.hpp>
 #include <cstddef>
 #include <cstdint>
-#include <limits>
 #include <string>
 #include <vector>
-
-#include "IdRange.hpp"
-#include "fmt/color.h"
-
-#include <fmt/ranges.h>
 
 inline constexpr std::initializer_list<const char* const> VERBOSE_FLAG_ALTS{
     common::KnownParams::VERBOSE_FLAG, common::KnownParams::VERBOSE_FLAG_SHORT};
 inline constexpr std::initializer_list<const char* const> INPUT_FILES_ALTS{
     common::KnownParams::INPUT_FILE, common::KnownParams::INPUT_FILE_SHORT};
+
+struct IdRange
+{
+  size_t from;
+  size_t to;
+};
 
 IdRange parseRange(const std::string& rangeAsString) {
   constexpr char RANGE_SEPARATOR{'-'};
@@ -53,7 +53,7 @@ std::vector<uint8_t> toDigitVector(size_t numberToConvert) {
 size_t sumWeirdPatterns(const IdRange& range) {
   size_t sumSoFar{0};
 
-  for (const auto presentId : range) {
+  for (size_t presentId{range.from}; presentId < range.to; ++presentId) {
     const auto digitVec{toDigitVector(presentId)};
     if (0 != (digitVec.size() % 2)) {
       // Number is odd, so there are no weird patterns
