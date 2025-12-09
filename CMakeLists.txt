@@ -11,6 +11,8 @@ set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
 project(AOC_2025)
 
+set(CMAKE_CXX_STANDARD 20)
+
 # First build submodules
 add_subdirectory("ext/argh")
 add_subdirectory("ext/fmt")

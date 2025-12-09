@@ -10,20 +10,28 @@
 #include <Logger.hpp>
 #include <Clap.hpp>
 #include <FileIterator.hpp>
+#include <array>
 #include <cstddef>
 #include <cstdint>
 #include <string>
-#include <vector>
+#include <span>
 
 inline constexpr std::initializer_list<const char* const> VERBOSE_FLAG_ALTS{
     common::KnownParams::VERBOSE_FLAG, common::KnownParams::VERBOSE_FLAG_SHORT};
 inline constexpr std::initializer_list<const char* const> INPUT_FILES_ALTS{
     common::KnownParams::INPUT_FILE, common::KnownParams::INPUT_FILE_SHORT};
 
+inline constexpr size_t REASONABLE_MAX_NUMBER_OF_DIGITS{14};
+
 struct IdRange
 {
   size_t from;
   size_t to;
+};
+
+static constexpr std::array POSSIBLE_PATTERN_SIZES{
+    1,
+    2,
 };
 
 IdRange parseRange(const std::string& rangeAsString) {
@@ -37,19 +45,41 @@ IdRange parseRange(const std::string& rangeAsString) {
   return {std::stoull(lowPart), std::stoull(highPart)};
 }
 
-std::vector<uint8_t> toDigitVector(size_t numberToConvert) {
-  constexpr size_t REASONABLE_MAX_NUMBER_OF_DIGITS{11};
+std::span<uint8_t> toDigitVector(size_t numberToConvert) {
   constexpr size_t CONVERSION_RADIX{10};
-  // Using static memory would make this program much faster
-  // but I'm not into refactoring it ;)
-  std::vector<uint8_t> retval{};
-  retval.reserve(REASONABLE_MAX_NUMBER_OF_DIGITS);
+  // Not really multi-thread friendly but who cares? :)
+  static std::array<uint8_t, REASONABLE_MAX_NUMBER_OF_DIGITS> retval{};
 
-  for (size_t number{numberToConvert}; number > 0; number /= CONVERSION_RADIX) {
-    retval.push_back(number % CONVERSION_RADIX);
+  size_t numberLen{0};
+  for (auto& elem : retval) {
+    elem = numberToConvert % CONVERSION_RADIX;
+    numberToConvert /= CONVERSION_RADIX;
+    ++numberLen;
+
+    if (numberToConvert == 0) { break; }
   }
 
-  return retval;
+  return {retval.data(), numberLen};
+}
+
+constexpr bool hasRepeatingPattern(const std::span<uint8_t>& numberToCheck,
+                                   size_t patternSize) {
+  /* First of all, make sure given pattern len "fits inside" given number */
+  const size_t numberSize{numberToCheck.size()};
+  /* Make sure not to cross the container boundary with pattern checking */
+  const size_t numOfIterations{numberSize - patternSize};
+
+  if (0 != (numberSize % patternSize)) { return false; }
+
+  for (size_t idx{0}; idx < numOfIterations; ++idx) {
+    if (numberToCheck[idx] != numberToCheck[idx + patternSize]) {
+      /* we've found digit that does not match pattern */
+      return false;
+    }
+  }
+  /* We've iterated through whole number and didn't find any digit that
+     *does not match the pattern */
+  return true;
 }
 
 size_t sumWeirdPatterns(const IdRange& range) {
@@ -57,22 +87,21 @@ size_t sumWeirdPatterns(const IdRange& range) {
 
   for (size_t presentId{range.from}; presentId < range.to; ++presentId) {
     const auto digitVec{toDigitVector(presentId)};
-    if (0 != (digitVec.size() % 2)) {
-      // Number is odd, so there are no weird patterns
-      continue;
-    }
 
-    const size_t halfOfDigitVec{digitVec.size() / 2};
-    size_t vecIdx{0};
-    for (; vecIdx < halfOfDigitVec; vecIdx++) {
+    const size_t halfOfDigitVec{(digitVec.size() / 2) + 1};
+    bool invalidIdFound{false};
+    for (size_t patternSize{1}; patternSize < halfOfDigitVec; patternSize++) {
       /* Weird pattern is when some set of digits repeats within a number */
-      /* Example: 1010 -> weird, 1234 -> valid */
-      if (digitVec.at(vecIdx) != digitVec.at(vecIdx + halfOfDigitVec)) {
+      /* Example: 1010 -> weird */
+      /* 1234 -> valid */
+      /* 999 -> weird */
+      if (hasRepeatingPattern(digitVec, patternSize)) {
+        invalidIdFound = true;
         break;
       }
     }
 
-    if (vecIdx == halfOfDigitVec) {
+    if (invalidIdFound) {
       // We've iterated through half of the vector
       // and found weird pattern!
       sumSoFar += presentId;
