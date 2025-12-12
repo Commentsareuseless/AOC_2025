@@ -13,7 +13,7 @@ namespace common
 namespace
 {
 inline constexpr uint32_t ARBITRARY_NUM_OF_CHARS_READ_AT_ONCE{20};
-inline constexpr uint32_t MAX_LINE_WIDTH{100};
+inline constexpr uint32_t MAX_LINE_WIDTH{110};
 
 template <class Deleter>
 std::string readFileUntill(const std::unique_ptr<FILE, Deleter>& filePtr,

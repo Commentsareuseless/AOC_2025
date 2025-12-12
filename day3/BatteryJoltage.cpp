@@ -1,0 +1,122 @@
+/**
+ * @file PresentDatabase.cpp
+ * @author Commentsareuseless
+ * @brief Second day puzzle
+ * @version 0.1
+ * @date 2025-12-07
+ */
+#include "fmt/base.h"
+#include <Logger.hpp>
+#include <Clap.hpp>
+#include <FileIterator.hpp>
+#include <array>
+#include <cctype>
+#include <cstddef>
+#include <cstdint>
+#include <iterator>
+#include <string>
+
+inline constexpr std::initializer_list<const char* const> VERBOSE_FLAG_ALTS{
+    common::KnownParams::VERBOSE_FLAG, common::KnownParams::VERBOSE_FLAG_SHORT};
+inline constexpr std::initializer_list<const char* const> INPUT_FILES_ALTS{
+    common::KnownParams::INPUT_FILE, common::KnownParams::INPUT_FILE_SHORT};
+inline constexpr size_t MAX_NUM_OF_TURNED_ON_BATTERIES{2};
+
+template <size_t BankSize, typename Item_t = uint8_t>
+class UsefulBatteryBank
+{
+public:
+  void append(const uint8_t newValue) {
+    if (shouldBeShiftedLeft()) { shiftLeft(); }
+
+    if (bank.back() < newValue) { bank.back() = newValue; }
+  }
+
+  uint32_t joltage() const {
+    constexpr uint32_t RADIX{10};
+
+    if constexpr (BankSize == 2) {
+      return bank[0] * RADIX + bank[1];
+    } else {
+      uint32_t combinedJoltage{0};
+      for (const auto battJoltage : bank) {
+        combinedJoltage += battJoltage;
+        combinedJoltage *= RADIX;
+      }
+      return combinedJoltage / RADIX;
+    }
+  }
+
+  void printFoundJoltage() {
+    lg::printInf("Highest joltage found: [{}, {}]", bank[0], bank[1]);
+  }
+
+private:
+  bool shouldBeShiftedLeft() const {
+    for (size_t idx{0}; idx < (BankSize - 1); ++idx) {
+      if (bank.at(idx) < bank.at(idx + 1)) {
+        /* Higher "radix" digit is lower than lower "radix" */
+        /* so shifting this number left will produce higher number */
+        /* e.g.: 59 -> *leftShift* -> 90 */
+        return true;
+      }
+    }
+
+    return false;
+  }
+
+  /* Could have used operator overload but I don't like them */
+  void shiftLeft() {
+    Item_t prevValue{0};
+    for (auto itr{bank.rbegin()}; itr != bank.rend(); ++itr) {
+      Item_t& currentVal{*itr};
+      Item_t tmp{currentVal};
+
+      currentVal = prevValue;
+      prevValue  = tmp;
+    }
+  }
+
+  std::array<Item_t, BankSize> bank{};
+};
+
+constexpr uint8_t charToDigit(char input) {
+  constexpr uint8_t FIRST_DIGIT_IN_ASCII{static_cast<uint8_t>('0')};
+  const bool isDigit{static_cast<bool>(std::isdigit(input))};
+  if (!isDigit) { return 0; }
+
+  const uint8_t digit{static_cast<uint8_t>(input)};
+  return digit - FIRST_DIGIT_IN_ASCII;
+}
+
+uint32_t sumJoltageInBank(const std::string& inputBank) {
+  UsefulBatteryBank<MAX_NUM_OF_TURNED_ON_BATTERIES> usefulBank{};
+  for (const char bat : inputBank) { usefulBank.append(charToDigit(bat)); }
+
+  usefulBank.printFoundJoltage();
+  lg::printInf("Combined Joltage: {}", usefulBank.joltage());
+  return usefulBank.joltage();
+}
+
+int main(int argc, char* argv[]) {
+  common::Clap argParser{argc, argv};
+
+  if (argParser.IsFlagSet(VERBOSE_FLAG_ALTS)) { lg::verboseFlag = true; }
+
+  const auto filePath{argParser.Value(INPUT_FILES_ALTS)};
+  common::File inputFile{filePath};
+
+  size_t sumOfJoltages{0};
+  for (const std::string& line : common::FileIterator<>{inputFile}) {
+    if (line.empty()) {
+      lg::printInf("Found empty line!");
+      continue;
+    }
+
+    sumOfJoltages += sumJoltageInBank(line);
+  }
+
+  lg::printResultOk("The password is: {}", sumOfJoltages);
+
+  return 0;
+}
