@@ -52,15 +52,8 @@ private:
    * @brief Should the battery bank joltages be shifted
    *        to make room for more (larger)batteries.
    *
-   * @return 0 if shift is not required, position of digit
-   *         that will be "squashed" by shift if necessary
-   * Example: bank: [8 1 8 1 8 1 9]
-   * shouldBeShifted? -> Yes, because 8(idx: 2) > 1(idx: 1)
-   * shiftPos -> 1 -> digits from idx:6 to idx: 1 should be shifted left
-   * Shifting result -> [8 8 1 8 1 9 0]
-   * Shifting bank left will make a room for another digit, that will make
-   * a final number larger.
-   * 8818190 > 8181819
+   * @return Position in bank that will be "squashed" by shift
+   *         See `shiftLeft()` for more info on "squashing"
    */
   uint32_t shouldBeShiftedLeft() const {
     for (size_t idx{0}; idx < (BankSize - 1); ++idx) {
